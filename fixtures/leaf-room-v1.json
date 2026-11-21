@@ -1,0 +1,70 @@
+{
+  "edition": "Leaf Room / 1",
+  "policy": {
+    "LEAF-1": "A foldout may leave the room for three evenings. Start counting on the evening it leaves.",
+    "LEAF-2": "On a credit slip for a joint print, put the studio name first, a colon next, and the print title last.",
+    "LEAF-3": "This edition approves only dry linen wraps. For any unlisted finish, withhold permission and refer the request to the pattern desk.",
+    "LEAF-4": "A shelf placard may separate its aisle name and color with either a slash or a vertical bar. Neither divider has priority."
+  },
+  "cases": [
+    {
+      "id": "foldout-loan",
+      "kind": "policy",
+      "prompt": "How many evenings can I borrow a foldout, and when do I start counting? Cite the room rule.",
+      "expected": {"disposition": "answer", "decision": "3 evenings, including departure", "citations": ["LEAF-1"]},
+      "outputs": {
+        "baseline": {"text": "Three evenings. The evening you take it out is evening one. [LEAF-1]", "disposition": "answer", "decision": "3 evenings, including departure"},
+        "candidate": {"text": "Count the evening it leaves as the first of your three evenings [LEAF-1].", "disposition": "answer", "decision": "3 evenings, including departure"}
+      },
+      "demo_vote": {"prefer": "tie", "reason": "Both give the same duration and the same counting rule, with the right citation."}
+    },
+    {
+      "id": "pleated-wrap",
+      "kind": "policy",
+      "prompt": "I have a new pleated paper finish. May I use it to wrap a print today? Cite your authority or tell me who can decide.",
+      "expected": {"disposition": "defer", "decision": "refer to pattern desk", "citations": ["LEAF-3"]},
+      "outputs": {
+        "baseline": {"text": "Yes. Paper is dry, so it qualifies under the dry-wrap rule [LEAF-3].", "disposition": "answer", "decision": "approve wrap"},
+        "candidate": {"text": "I can't approve pleated paper under this edition. Only dry linen is listed; ask the pattern desk before using another finish [LEAF-3].", "disposition": "defer", "decision": "refer to pattern desk"}
+      },
+      "demo_vote": {"prefer": "candidate", "reason": "Dry paper is not dry linen. Withholding permission and naming the desk avoids an unsupported approval."}
+    },
+    {
+      "id": "credit-slip",
+      "kind": "policy",
+      "prompt": "Studio Thimble Row made the joint print Low Tide. What should I write on its credit slip? Include the clause.",
+      "expected": {"disposition": "answer", "decision": "studio: title", "citations": ["LEAF-2"]},
+      "outputs": {
+        "baseline": {"text": "Start with the studio, add a colon, then write the print title [LEAF-2].", "disposition": "answer", "decision": "studio: title"},
+        "candidate": {"text": "Write “Thimble Row: Low Tide” on the slip [LEAF-2].", "disposition": "answer", "decision": "studio: title"}
+      },
+      "demo_vote": {"prefer": "candidate", "reason": "Both give the prescribed format, but only one supplies a line the requester can copy."}
+    },
+    {
+      "id": "tab-list",
+      "kind": "coding",
+      "prompt": "Write a Python function tabs(labels) returning the nonblank labels after trimming edge whitespace. Keep input order and repeated labels. The cards contain synthetic, pre-recorded observations, not a live test run.",
+      "tests": {
+        "trim": {"input": ["  ochre", "indigo "], "want": ["ochre", "indigo"]},
+        "all-blank": {"input": ["", "  "], "want": []},
+        "repeat": {"input": ["ink", "  ", "ink "], "want": ["ink", "ink"]}
+      },
+      "outputs": {
+        "baseline": {"text": "def tabs(labels):\n    trimmed = (label.strip() for label in labels)\n    return [label for label in trimmed if label]", "disposition": "answer", "observed": {"trim": ["ochre", "indigo"], "all-blank": [], "repeat": ["ink", "ink"]}},
+        "candidate": {"text": "def tabs(labels):\n    cleaned = [s.strip() for s in labels if s.strip()]\n    return list(dict.fromkeys(cleaned))", "disposition": "answer", "observed": {"trim": ["ochre", "indigo"], "all-blank": [], "repeat": ["ink"]}}
+      },
+      "demo_vote": {"prefer": "baseline", "reason": "The repeat example loses the second ink tab in one response; repeats were explicitly required."}
+    },
+    {
+      "id": "shelf-placard",
+      "kind": "policy",
+      "prompt": "Mock up one allowed placard for aisle Ridge and color Silt. Tell me if the rule specifies which divider will read better from the far shelf.",
+      "expected": {"disposition": "answer", "decision": "either divider permitted", "citations": ["LEAF-4"]},
+      "outputs": {
+        "baseline": {"text": "Ridge / Silt. The room permits both dividers and says nothing about distance readability [LEAF-4].", "disposition": "answer", "decision": "either divider permitted"},
+        "candidate": {"text": "Ridge | Silt. Neither mark is preferred by the rule [LEAF-4]; try a sample at shelf distance.", "disposition": "answer", "decision": "either divider permitted"}
+      },
+      "demo_vote": {"prefer": "abstain", "reason": "Both are allowed. No placard at the actual viewing distance is provided to judge legibility."}
+    }
+  ]
+}
