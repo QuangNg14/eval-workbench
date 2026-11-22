@@ -122,21 +122,31 @@ class Result:
         return all(c.passed for c in self.by_role[role])
 
 
-def adjudicate(data: dict, packet: Packet, submitted: dict) -> list[Result]:
+def valid_vote(case_id: str, vote: object) -> dict[str, str]:
+    if not isinstance(vote, dict) or set(vote) != {"choice", "reason"}:
+        raise ValueError(f"{case_id}: expected choice and reason.")
+    choice, reason = vote["choice"], vote["reason"]
+    if choice not in CHOICES or not isinstance(reason, str) or not reason.strip():
+        raise ValueError(f"{case_id}: select A, B, tie or abstain and give a reason; not scored.")
+    return {"choice": choice, "reason": reason.strip()}
+
+
+def ballot_votes(packet: Packet, submitted: dict) -> dict:
     if submitted.get("packet") != packet.id:
         raise ValueError("Ballot belongs to a different packet.")
     votes = submitted.get("votes")
     if not isinstance(votes, dict) or votes.keys() != packet.side_a.keys():
         raise ValueError("Expected exactly one vote entry for each frozen case ID.")
+    return votes
+
+
+def adjudicate(data: dict, packet: Packet, submitted: dict) -> list[Result]:
+    votes = ballot_votes(packet, submitted)
     rows = []
     for case in data["cases"]:
         i = case["id"]
-        vote = votes[i]
-        if not isinstance(vote, dict) or set(vote) != {"choice", "reason"}:
-            raise ValueError(f"{i}: expected choice and reason.")
+        vote = valid_vote(i, votes[i])
         choice, reason = vote["choice"], vote["reason"]
-        if choice not in CHOICES or not isinstance(reason, str) or not reason.strip():
-            raise ValueError(f"{i}: select A, B, tie or abstain and give a reason; not scored.")
         preference = choice
         if choice in ("A", "B"):
             preference = "win" if packet.role(i, choice) == "candidate" else "regression"

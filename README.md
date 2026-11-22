@@ -1,6 +1,25 @@
 # Leaf Room eval workbench
 
-Compare two frozen, invented responses to each of five requests. Four cases use the fictional Leaf Room policy; one checks a label-cleaning function against three pre-recorded examples. Python 3.10+ and its standard library are the only requirements. No provider calls, server, login or execution of response code.
+Compare two frozen, invented responses to each of five requests. Four cases use the fictional Leaf Room policy; one checks a label-cleaning function against three pre-recorded examples. The CLI requires only Python 3.10+. The optional React/TypeScript reviewer runs on loopback. Neither runs response code, calls a provider, or requires a login.
+
+## Review in your browser
+
+From the repo root, install the locked UI dependencies and build once with Node.js 20+ and npm:
+
+```powershell
+npm ci --ignore-scripts --no-audit --no-fund
+npm run build
+```
+
+Start or resume a manual packet:
+
+```powershell
+python -B -S browser_review.py my-review
+```
+
+Open the printed `http://127.0.0.1:PORT/` URL. Compare A and B, then save a choice and rationale for each case. Tab moves between controls; arrow keys change the radio choice. Saved votes survive closing the browser or restarting the server with the same run name. Unsaved edits do not. **Reveal final report** becomes available after all five votes are saved; it runs the CLI scorer and locks the ballot.
+
+Use one server and one reviewer per run; do not edit the same ballot through another CLI or tab while reviewing. Only display evidence and manual votes reach the browser before reveal. Anyone with filesystem access can still read the local key. No server is needed for the file-based workflow below.
 
 ## Try it locally
 
@@ -43,5 +62,5 @@ The SHA-256 pin in `eval_core.py` covers the UTF-8 fixture after CRLF normalizat
 
 ```powershell
 Remove-Item Env:GH_TOKEN,Env:GITHUB_TOKEN -ErrorAction SilentlyContinue
-python -B -S -m unittest -v test_workbench
+python -B -S -m unittest -v test_workbench test_browser_review
 ```
