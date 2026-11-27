@@ -13,6 +13,12 @@ from eval_core import ROOT, assignment, ballot_votes, frozen, read_object, valid
 from workbench import prepare, run_path, score
 
 
+class VoteConflict(Exception):
+    def __init__(self, changed: dict) -> None:
+        super().__init__("Saved votes changed in another tab. Review the affected cases.")
+        self.changed = changed
+
+
 class Review:
     def __init__(self, run: Path) -> None:
         self.run = run
@@ -48,19 +54,27 @@ class Review:
         return {"packet": self.packet.id, "policy": self.data["policy"],
                 "cases": cases, "revealed": self.report.exists()}
 
-    def mutate(self, route: str, body: dict) -> None:
+    def mutate(self, route: str, body: dict) -> dict:
         with self.lock:
             if self.report.exists():
                 raise FileExistsError("The ballot has already been revealed and is read-only.")
             if body.get("packet") != self.packet.id:
                 raise ValueError("Wrong packet. Reload this review.")
-            if route == "/api/reveal":
-                score(self.run, self.data)
-                return
             submitted = self.submitted()
+            if route == "/api/reveal":
+                seen = ballot_votes(self.packet, body)
+                changed = {i: vote for i, vote in submitted["votes"].items() if seen[i] != vote}
+                if changed:
+                    raise VoteConflict(changed)
+                score(self.run, self.data)
+                return {"message": "Revealed."}
             i = body.get("case")
             if not isinstance(i, str) or i not in submitted["votes"]:
                 raise ValueError("Unknown case.")
+            if not isinstance(body.get("previous"), dict):
+                raise ValueError("Missing previous vote. Reload the review before saving.")
+            if body["previous"] != submitted["votes"][i]:
+                raise VoteConflict({i: submitted["votes"][i]})
             submitted["votes"][i] = valid_vote(i, body.get("vote"))
             with tempfile.NamedTemporaryFile(dir=self.path.parent, delete=False) as tmp:
                 name = Path(tmp.name)
@@ -73,6 +87,7 @@ class Review:
                 name.replace(self.path)
             finally:
                 name.unlink(missing_ok=True)
+            return {"vote": submitted["votes"][i]}
 
 
 def server_for(review: Review, port: int) -> ThreadingHTTPServer:
@@ -127,13 +142,16 @@ def server_for(review: Review, port: int) -> ThreadingHTTPServer:
                 return
             try:
                 length = int(self.headers.get("Content-Length", "0"))
-                if not 0 < length <= 65536:
-                    raise ValueError("Submit a ballot entry under 64 KiB.")
+                limit = 65536 * (len(review.packet.side_a) if self.path == "/api/reveal" else 1)
+                if not 0 < length <= limit:
+                    raise ValueError(f"Expected a request of 1 to {limit} bytes.")
                 body = json.loads(self.rfile.read(length))
                 if not isinstance(body, dict):
                     raise ValueError("Expected an object.")
-                review.mutate(self.path, body)
-                self.message(200, "Saved.")
+                self.reply(200, json.dumps(review.mutate(self.path, body)).encode(), "application/json")
+            except VoteConflict as exc:
+                self.reply(409, json.dumps({"message": str(exc), "changed": exc.changed}).encode(),
+                           "application/json")
             except FileExistsError:
                 self.message(409, "This review is already revealed.")
             except ValueError as exc:

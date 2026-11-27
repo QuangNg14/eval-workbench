@@ -25,7 +25,11 @@ python -B -S browser_review.py my-review
 
 Open the printed `http://127.0.0.1:PORT/` URL. Compare A and B, then save a choice and rationale for each case. Tab moves between controls; arrow keys change the radio choice. Saved votes survive closing the browser or restarting the server with the same run name. Unsaved edits do not. **Reveal final report** becomes available after all five votes are saved; it runs the CLI scorer and locks the ballot.
 
-Use one server and one reviewer per run; do not edit the same ballot through another CLI or tab while reviewing. Only display evidence and manual votes reach the browser before reveal. Anyone with filesystem access can still read the local key. No server is needed for the file-based workflow below.
+If two tabs edit the same case, saving checks both the choice and the reason against what that tab last saw. A conflict leaves the saved vote and your typed draft intact. **Use saved vote** discards only that case's draft; **Keep my draft** lets you revise and save it explicitly. Changes to other cases do not block a save.
+
+Reveal checks all five saved votes together. If another tab changed even one rationale, no report is created and the ballot stays open. Use **Review the changed case** to compare the versions, then explicitly reveal once you're satisfied.
+
+Use one server and one reviewer per run. This check compares current values, not edit history, and does not coordinate writes from another server, the CLI, or a file editor. Only display evidence and manual votes reach the browser before reveal. Anyone with filesystem access can still read the local key. No server is needed for the file-based workflow below.
 
 ### Start a fresh peer ballot
 
